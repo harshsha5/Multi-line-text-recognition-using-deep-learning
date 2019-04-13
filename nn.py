@@ -10,6 +10,12 @@ from util import *
 # X be [Examples, Dimensions]
 def initialize_weights(in_size,out_size,params,name=''):
     W, b = None, None
+
+    U = (6/(in_size+out_size))**0.5 #confirm value
+
+    W = np.random.uniform(-U,U,(in_size,out_size))  
+
+    b = np.reshape(np.zeros(out_size),(1,out_size)) #Made in the shape of a row vector as of now, so that it can be added to WX
     
     params['W' + name] = W
     params['b' + name] = b
@@ -19,6 +25,9 @@ def initialize_weights(in_size,out_size,params,name=''):
 # a sigmoid activation function
 def sigmoid(x):
     res = None
+    func = lambda t: 1/(1+np.exp(-t))
+    vfunc = np.vectorize(func)
+    res = vfunc(x)
     return res
 
 # Q 2.2.2
@@ -39,6 +48,9 @@ def forward(X,params,name='',activation=sigmoid):
 
     # your code here
     
+    pre_act = np.matmul(X,W) + b
+    if(activation == sigmoid):
+        post_act = sigmoid(pre_act)
 
     # store the pre-activation and post-activation values
     # these will be important in backprop
