@@ -49,7 +49,7 @@ def forward(X,params,name='',activation=sigmoid):
     # your code here
     
     pre_act = np.matmul(X,W) + b
-    if(activation == sigmoid):
+    if(activation == sigmoid):                  #Handle other cases as well
         post_act = sigmoid(pre_act)
 
     # store the pre-activation and post-activation values
@@ -125,7 +125,19 @@ def backwards(delta,params,name='',activation_deriv=sigmoid_deriv):
     # your code here
     # do the derivative through activation first
     # then compute the derivative W,b, and X
-    
+
+    #think of 'a' as the linear combo of x's and 'z' as the post-activation of 'a'
+    if(activation_deriv == sigmoid_deriv):  #Handle other cases as well
+        dz_da = sigmoid_deriv(post_act)
+
+    da_dW = X 
+    #da_db is simply identity
+    da_dX = W     
+
+    '''
+    To do: Multiply the prior gradients with the newly computed ones. To get the true gradient.
+    Ensure same size of gradients as of the original input.
+    '''
 
     # store the gradients
     params['grad_W' + name] = grad_W
@@ -136,6 +148,13 @@ def backwards(delta,params,name='',activation_deriv=sigmoid_deriv):
 # split x and y into random batches
 # return a list of [(batch1_x,batch1_y)...]
 def get_random_batches(x,y,batch_size):
+    assert batch_size <= x.shape[0], "Batch size is larger than the total number of data points"
     batches = []
+    no_of_batches_wanted = 1
+    for i in range(no_of_batches_wanted):
+        idx = np.random.choice(x.shape[0], batch_size, replace=False)
+        x_sample = x[idx,:]
+        y_sample = y[idx,:]
+        batches.append((x_sample,y_sample))
     
     return batches
