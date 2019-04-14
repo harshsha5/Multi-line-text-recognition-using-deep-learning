@@ -79,8 +79,25 @@ def softmax(x):
 # y is size [examples,classes]
 # probs is size [examples,classes]
 def compute_loss_and_acc(y, probs):
+    '''
+    To find the accuracy find the label of the data from the one hot vector encoding by finding the row-wise argmax in the y.
+    Also find the argmax of the probs. Compare this with the vector obtained above.
+
+    To find the loss, use the argmax of y obtained above. Use a loop over that array & multiply y with the log of the value at the corresponding index in probs. 
+    Keep summing these up and take a minus at the end.
+    '''
     loss, acc = None, None
-    
+
+    true_outputs = np.argmax(y, axis=1)            #Stores the indices of the true output
+    predicted_outputs = np.argmax(probs, axis=1) #Stores the indices of the estimated output
+    assert true_outputs.shape[0] == predicted_outputs.shape[0], "Unequal length of output vectors of y and probs"
+    correct_predictions = np.count_nonzero(true_outputs==predicted_outputs)
+    acc = correct_predictions/true_outputs.shape[0] 
+
+    loss = 0
+    for i,elt in enumerate(true_outputs):
+        loss-= np.log(probs[i,elt])
+   
     return loss, acc 
 
 # we give this to you
