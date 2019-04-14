@@ -2,7 +2,7 @@ import numpy as np
 from util import *
 # do not include any more libraries here!
 # do not put any code outside of functions!
-
+import ipdb
 # Q 2.1
 # initialize b to 0 vector
 # b should be a 1D array, not a 2D array with a singleton dimension
@@ -62,8 +62,16 @@ def forward(X,params,name='',activation=sigmoid):
 # x is [examples,classes]
 # softmax should be done for each row
 def softmax(x):
+    '''
+    Find max of each of the rows (one row is one data point). Subtract this max from each of elements in a row (The stability trick).
+    Find the exponential of each element in the array. Find softmax by dividing the sum of the elements in the row by each element . 
+    res is softmax of each class. The array shape is [examples,classes]
+    '''
     res = None
-    
+    x = x - np.amax(x, axis=1)[:,None]  
+    x = np.exp(x)
+    res = x / np.sum(x, axis=1)[:,None]  
+
     return res
 
 # Q 2.2.3
