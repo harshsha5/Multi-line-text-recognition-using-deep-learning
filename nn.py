@@ -15,7 +15,7 @@ def initialize_weights(in_size,out_size,params,name=''):
 
     W = np.random.uniform(-U,U,(in_size,out_size))  
 
-    b = np.reshape(np.zeros(out_size),(1,out_size)) #Made in the shape of a row vector as of now, so that it can be added to WX
+    b = np.zeros(out_size) #Made in the shape of a row vector as of now, so that it can be added to WX
     
     params['W' + name] = W
     params['b' + name] = b
@@ -48,9 +48,9 @@ def forward(X,params,name='',activation=sigmoid):
 
     # your code here
     
-    pre_act = np.matmul(X,W) + b
-    if(activation == sigmoid):                  #Handle other cases as well
-        post_act = sigmoid(pre_act)
+    pre_act = np.matmul(X,W) + b      
+
+    post_act = activation(pre_act)  
 
     # store the pre-activation and post-activation values
     # these will be important in backprop
@@ -90,6 +90,7 @@ def compute_loss_and_acc(y, probs):
 
     true_outputs = np.argmax(y, axis=1)            #Stores the indices of the true output
     predicted_outputs = np.argmax(probs, axis=1) #Stores the indices of the estimated output
+    #print("===================================================",true_outputs.shape,"\n",predicted_outputs.shape,"\n")
     assert true_outputs.shape[0] == predicted_outputs.shape[0], "Unequal length of output vectors of y and probs"
     correct_predictions = np.count_nonzero(true_outputs==predicted_outputs)
     acc = correct_predictions/true_outputs.shape[0] 
@@ -127,17 +128,15 @@ def backwards(delta,params,name='',activation_deriv=sigmoid_deriv):
     # then compute the derivative W,b, and X
 
     #think of 'a' as the linear combo of x's and 'z' as the post-activation of 'a'
-    if(activation_deriv == sigmoid_deriv):  #Handle other cases as well
-        dz_da = sigmoid_deriv(post_act)
+    # if(activation_deriv == sigmoid_deriv):  #Handle other cases as well
+    #     dz_da = sigmoid_deriv(post_act)
 
-    da_dW = X 
+    dz_da = delta*activation_deriv(post_act)
+
+    grad_W = np.matmul(X.T,dz_da) 
     #da_db is simply identity
-    da_dX = W     
-
-    '''
-    To do: Multiply the prior gradients with the newly computed ones. To get the true gradient.
-    Ensure same size of gradients as of the original input.
-    '''
+    grad_X = np.matmul(dz_da,W.T)  
+    grad_b = np.full(b.shape, np.sum(dz_da, axis=0))
 
     # store the gradients
     params['grad_W' + name] = grad_W
@@ -150,7 +149,7 @@ def backwards(delta,params,name='',activation_deriv=sigmoid_deriv):
 def get_random_batches(x,y,batch_size):
     assert batch_size <= x.shape[0], "Batch size is larger than the total number of data points"
     batches = []
-    no_of_batches_wanted = 1
+    no_of_batches_wanted = x.shape[0]//batch_size
     for i in range(no_of_batches_wanted):
         idx = np.random.choice(x.shape[0], batch_size, replace=False)
         x_sample = x[idx,:]

@@ -2,6 +2,7 @@ import numpy as np
 # you should write your functions in nn.py
 from nn import *
 from util import *
+import ipdb
 
 
 # fake data
@@ -39,6 +40,7 @@ print("{}, {:.2f}".format(params['boutput'].sum(),params['Woutput'].std()**2))
 # implement sigmoid
 test = sigmoid(np.array([-1000,1000]))
 print('should be zero and one\t',test.min(),test.max())
+
 # implement forward
 h1 = forward(x,params,'layer1')
 print(h1.shape)
@@ -79,6 +81,14 @@ batches = get_random_batches(x,y,5)
 # print batch sizes
 print([_[0].shape[0] for _ in batches])
 batch_num = len(batches)
+print(batch_num)
+
+# params = {}
+
+# # Q 2.1
+# # initialize a layer
+# initialize_weights(2,25,params,'layer1')
+# initialize_weights(25,4,params,'output')
 
 # WRITE A TRAINING LOOP HERE
 max_iters = 500
@@ -88,19 +98,38 @@ for itr in range(max_iters):
     total_loss = 0
     avg_acc = 0
     for xb,yb in batches:
-        pass
+        
         # forward
+        h1 = forward(xb,params,'layer1')
+        probs = forward(h1,params,'output',softmax)
 
         # loss
         # be sure to add loss and accuracy to epoch totals 
+        loss, acc = compute_loss_and_acc(yb, probs)
+        total_loss+=loss
+        avg_acc+=acc
 
         # backward
+        delta1 = probs
+        delta1[np.arange(probs.shape[0]),np.argmax(yb, axis=1)] -= 1
+        delta2 = backwards(delta1,params,'output',linear_deriv)
+        backwards(delta2,params,'layer1',sigmoid_deriv)
 
         # apply gradient
 
-        
+        for layer in ['output', 'layer1']:
+            params['W' + layer] -= learning_rate * params['grad_W' + layer]
+            params['b' + layer] -= learning_rate * params['grad_b' + layer]
+
+
+    avg_acc/=len(batches)  
+
     if itr % 100 == 0:
         print("itr: {:02d} \t loss: {:.2f} \t acc : {:.2f}".format(itr,total_loss,avg_acc))
+
+
+
+'Verify this training loop and do Q2.5'
 
 
 # Q 2.5 should be implemented in this file
