@@ -2,7 +2,7 @@ import numpy as np
 from util import *
 # do not include any more libraries here!
 # do not put any code outside of functions!
-import ipdb
+#import ipdb
 # Q 2.1
 # initialize b to 0 vector
 # b should be a 1D array, not a 2D array with a singleton dimension

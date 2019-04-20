@@ -2,7 +2,7 @@ import numpy as np
 # you should write your functions in nn.py
 from nn import *
 from util import *
-import ipdb
+#import ipdb
 
 
 # fake data
@@ -125,11 +125,14 @@ for itr in range(max_iters):
     avg_acc/=len(batches)  
 
     if itr % 100 == 0:
-        print("itr: {:02d} \t loss: {:.2f} \t acc : {:.2f}".format(itr,total_loss,avg_acc))
+        print("itr: {:02d} \t loss: {:.2f} \t acc : {:.2f}".format(itr,total_loss,avg_acc))     #This is the average accuracy for all the batches combined but for a specific iteration count
 
 
+'''
+Do Q2.5
+See if the method I am calculating accuracy by is correct or not? 
+'''
 
-'Verify this training loop and do Q2.5'
 
 
 # Q 2.5 should be implemented in this file

@@ -1,6 +1,28 @@
 import numpy as np
 import scipy.io
 from nn import *
+import matplotlib.pyplot as plt
+import ipdb
+
+def get_accuracy_graph(accuracy_per_epoch_list,max_iters):
+    epoch_count = np.arange(1,max_iters+1)
+    fig = plt.figure()
+    ax = plt.axes()
+    ax.plot(epoch_count, accuracy_per_epoch_list)
+    ax.set_xlabel('No. of Epochs')
+    ax.set_ylabel('Accuracy')
+    ax.set_title('Accuracy VS No. of Epochs')
+    plt.show()
+
+def get_loss_graph(total_loss_per_epoch_list,max_iters):
+    epoch_count = np.arange(1,max_iters+1)
+    fig = plt.figure()
+    ax = plt.axes()
+    ax.plot(epoch_count, total_loss_per_epoch_list)
+    ax.set_xlabel('No. of Epochs')
+    ax.set_ylabel('Cross entropy Loss')
+    ax.set_title('Cross Entropy loss VS No. of Epochs')
+    plt.show()
 
 train_data = scipy.io.loadmat('../data/nist36_train.mat')
 valid_data = scipy.io.loadmat('../data/nist36_valid.mat')
@@ -10,8 +32,17 @@ valid_x, valid_y = valid_data['valid_data'], valid_data['valid_labels']
 
 max_iters = 50
 # pick a batch size, learning rate
-batch_size = None
-learning_rate = None
+batch_size = train_x.shape[0]//1000
+learning_rate = .005          
+'''
+Tried learning rates: 
+                        0.1 --------------> 22.58%
+                        0.01 -------------> 72.8%
+                        0.0015 ------------> 73.19%
+                        0.0025 ------------> 74.52%
+                        0.005 ------------> 74.58%
+                        0.001 ------------> 72.02%
+'''
 hidden_size = 64
 
 batches = get_random_batches(train_x,train_y,batch_size)
@@ -20,23 +51,74 @@ batch_num = len(batches)
 params = {}
 
 # initialize layers here
-
-
+initialize_weights(1024,64,params,'layer1')
+initialize_weights(64,36,params,'output')
+assert(params['Wlayer1'].shape == (1024,64))
+assert(params['blayer1'].shape == (64,))
 
 # with default settings, you should get loss < 150 and accuracy > 80%
+accuracy_per_epoch_list = []
+total_loss_per_epoch_list = []
 for itr in range(max_iters):
     total_loss = 0
     total_acc = 0
     for xb,yb in batches:
-        pass
         # training loop can be exactly the same as q2!
+        # forward
+        h1 = forward(xb,params,'layer1')
+        probs = forward(h1,params,'output',softmax)
+
+        # loss
+        # be sure to add loss and accuracy to epoch totals 
+        loss, acc = compute_loss_and_acc(yb, probs)
+        total_loss+=loss
+        total_acc+=acc
+
+        # backward
+        delta1 = probs
+        delta1[np.arange(probs.shape[0]),np.argmax(yb, axis=1)] -= 1
+        delta2 = backwards(delta1,params,'output',linear_deriv)
+        backwards(delta2,params,'layer1',sigmoid_deriv)
+
+        # apply gradient
+
+        for layer in ['output', 'layer1']:
+            params['W' + layer] -= learning_rate * params['grad_W' + layer]
+            params['b' + layer] -= learning_rate * params['grad_b' + layer]
+
+    total_acc/=len(batches) 
+    accuracy_per_epoch_list.append(total_acc)
+    total_loss_per_epoch_list.append(total_loss)
+
         
     if itr % 2 == 0:
-        print("itr: {:02d} \t loss: {:.2f} \t acc : {:.2f}".format(itr,total_loss,total_acc))
+        print("itr: {:02d} \t loss: {:.2f} \t acc : {:.2f}".format(itr,total_loss,total_acc))    #This is the average accuracy for all the batches combined but for a specific iteration count
+
+'''
+See if the method I am calculating accuracy by is correct or not?  What do they mean by total_acc
+Why do we need the validation data in loss/accuracy VS no. of iterations. Validation data should only involve forward pass.
+'''
+
+get_accuracy_graph(accuracy_per_epoch_list,max_iters)
+get_loss_graph(total_loss_per_epoch_list,max_iters)
+
+
 # run on validation set and report accuracy! should be above 75%
-valid_acc = None
+batches = get_random_batches(valid_x,valid_y,valid_x.shape[0])
+#batch_num = len(batches)
+#print("No. of batches considered for validation data are: ",batch_num)
+
+for xb,yb in batches:
+    # forward
+    h1 = forward(xb,params,'layer1')
+    probs = forward(h1,params,'output',softmax)
+
+    # loss
+    # be sure to add loss and accuracy to epoch totals 
+    validation_loss, valid_acc = compute_loss_and_acc(yb, probs)
 
 print('Validation accuracy: ',valid_acc)
+
 if False: # view the data
     for crop in xb:
         import matplotlib.pyplot as plt
@@ -53,7 +135,7 @@ from mpl_toolkits.axes_grid1 import ImageGrid
 
 
 
-# Q3.1.3
+# Q3.1.4
 confusion_matrix = np.zeros((train_y.shape[1],train_y.shape[1]))
 
 import string
