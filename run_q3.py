@@ -97,6 +97,7 @@ for itr in range(max_iters):
 '''
 See if the method I am calculating accuracy by is correct or not?  What do they mean by total_acc
 Why do we need the validation data in loss/accuracy VS no. of iterations. Validation data should only involve forward pass.
+Even if we need it, where do we run the forward pass for the validation data?
 '''
 
 get_accuracy_graph(accuracy_per_epoch_list,max_iters)
@@ -124,6 +125,8 @@ if False: # view the data
         import matplotlib.pyplot as plt
         plt.imshow(crop.reshape(32,32).T)
         plt.show()
+
+
 import pickle
 saved_params = {k:v for k,v in params.items() if '_' not in k}
 with open('q3_weights.pickle', 'wb') as handle:
@@ -137,6 +140,11 @@ from mpl_toolkits.axes_grid1 import ImageGrid
 
 # Q3.1.4
 confusion_matrix = np.zeros((train_y.shape[1],train_y.shape[1]))
+'Here confusion matrix has been created on the validation data. Please change to test data'
+result = np.argmax(yb, axis=1)  #This is the set of true labels -------------------------------->This is temporary. Kindly change
+predicted_outputs = np.argmax(probs, axis=1) #This is the set of predicted labels -------------------------------->This is temporary. Kindly change
+for i,elt in enumerate(result):
+    confusion_matrix[predicted_outputs[i]][result[i]]+=1
 
 import string
 plt.imshow(confusion_matrix,interpolation='nearest')
