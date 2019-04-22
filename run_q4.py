@@ -20,8 +20,12 @@ import warnings
 warnings.simplefilter(action='ignore', category=FutureWarning)
 warnings.simplefilter(action='ignore', category=UserWarning)
 
+
+#Referenced Tutorial for this question
+
 for img in os.listdir('../images'):
     im1 = skimage.img_as_float(skimage.io.imread(os.path.join('../images',img)))
+    print(im1.shape)
     bboxes, bw = findLetters(im1)
 
     plt.imshow(bw)
