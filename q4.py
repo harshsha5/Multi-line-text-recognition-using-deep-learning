@@ -29,7 +29,7 @@ def findLetters(image):
     #How are we denoising it?
 
     thresh = skimage.filters.threshold_otsu(image)
-    bw = skimage.morphology.closing(image < thresh, skimage.morphology.square(3))
+    bw = skimage.morphology.closing(image < thresh, skimage.morphology.square(10))
 
     # remove artifacts connected to image border
     cleared = skimage.segmentation.clear_border(bw)
