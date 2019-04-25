@@ -51,18 +51,34 @@ def form_array_and_see_image(minr,maxr,minc,maxc,bw):
     ax.imshow(array)
     plt.show()
 
+def find_indices_of_spaces(bboxes,average_word_length):
+    factor_of_word_length = 2.1     #The factor by which the next character should be away from the previous to characterize it as a new word
+    indices_of_spaces = []
+    for i in range(bboxes.shape[0]-1):
+        minr_prev, minc_prev, maxr_prev, maxc_prev = bboxes[i,:]  
+        minr_next, minc_next, maxr_next, maxc_next = bboxes[i+1,:] 
+        if(minc_next > minc_prev + factor_of_word_length*average_word_length):
+            indices_of_spaces.append(i)
+        #ipdb.set_trace()
+    return indices_of_spaces
 
 def order_bounding_boxes_as_rows(bboxes_original,bw):
     bboxes = bboxes_original[bboxes_original[:,1].argsort()] #Sort bounding boxes by column number. So that when we sort them by rows later, they are already sorted by column.
     count = 0
     dict_of_bboxes = {0 : [0]}
     cluster_properties = []
-
+    sum_of_word_lengths = 0
+    '''
+    Logic: Find the coordinates of the centroid of a bounding box. If the next bounding box has a centroid within the minr and maxr(plus some margin)
+    then we put it in the same class (ie. the samw row) else we add a new class. Once they are sorted according to rows, we order them to see which row
+    comes first in row-wise by comparing the clusters properties (ie. minr of the various clusters)
+    '''
     for i in range(bboxes.shape[0]):
         minr, minc, maxr, maxc = bboxes[i,:]
         x_centre = minc + (maxc-minc)/2
         y_centre = minr + (maxr-minr)/2
-        form_array_and_see_image(minr,maxr,minc,maxc,bw)
+        sum_of_word_lengths += maxc-minc
+        #form_array_and_see_image(minr,maxr,minc,maxc,bw)
         flag = 0
         if(i==0):
             cluster_properties.append((.95*minr,1.05*maxr))
@@ -70,14 +86,31 @@ def order_bounding_boxes_as_rows(bboxes_original,bw):
             for j,elt in enumerate(cluster_properties):
                 if(y_centre>elt[0] and y_centre<elt[1]):
                     dict_of_bboxes[j].append(i)
-                    print("Classified in class",j)
+                    #print("Classified in class",j)
                     flag=1
                     break
             if(flag!=1):
                cluster_properties.append((.95*minr,1.05*maxr))
                index = len(cluster_properties)-1
                dict_of_bboxes[index] = [i] 
-               print("new row created")
+               #print("new row created")
+
+    row_order_for_classes = sorted(range(len(cluster_properties)), key=lambda k: cluster_properties[k][0])  #Orders the indices according to minr. So lower the minr earlier your cluster is.
+    
+    reordered_bboxes = np.zeros((1,4))
+    previous_length = 0
+    indices_of_new_line = []
+    for elt in row_order_for_classes:
+        for element in dict_of_bboxes[elt]:
+            reordered_bboxes = np.vstack((reordered_bboxes,bboxes[element,:]))
+        previous_length += len(dict_of_bboxes[elt])
+        indices_of_new_line.append(previous_length)     #If this array has j, that means jth word should be a new_line(consider zero indexed array) in the bounding box array
+
+    reordered_bboxes = reordered_bboxes[1:,:]
+    average_word_length = sum_of_word_lengths/reordered_bboxes.shape[0]
+    print(reordered_bboxes)
+    print(average_word_length)
+    indices_of_spaces = find_indices_of_spaces(reordered_bboxes,average_word_length)
 
 
     '''
@@ -85,6 +118,9 @@ def order_bounding_boxes_as_rows(bboxes_original,bw):
     save the indices of the spaces.
     If the distance between the start of next > start of previous + 1.3 mean_length_of_word_in_a_row then it's a different word
     '''
+    ipdb.set_trace()
+
+    return reordered_bboxes,indices_of_new_line,indices_of_spaces
 
 
 
