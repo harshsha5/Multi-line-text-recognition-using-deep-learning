@@ -10,6 +10,8 @@ import skimage.segmentation
 
 import matplotlib.pyplot as plt
 
+# import ipdb
+
 # takes a color image
 # returns a list of bounding boxes and black_and_white image
 def findLetters(image):
@@ -21,6 +23,8 @@ def findLetters(image):
     # this can be 10 to 15 lines of code using skimage functions
     image = skimage.color.rgb2gray(image)
     image = image / np.max(image)
+    grayscale = image
+    # ipdb.set_trace()
     image = skimage.filters.gaussian(image)
     #How are we denoising it?
 
@@ -34,13 +38,14 @@ def findLetters(image):
     label_image = skimage.measure.label(cleared)
     image_label_overlay = skimage.color.label2rgb(label_image, image=image)
 
-    fig, ax = plt.subplots(figsize=(10, 6))
-    ax.imshow(image_label_overlay)
-    plt.show()
+    # fig, ax = plt.subplots(figsize=(10, 6))
+    # ax.imshow(grayscale)
+    # plt.show()
 
     regions = skimage.measure.regionprops(label_image)
     for region in regions:
     	if (region.area >= min_region_size):
     		bboxes.append(region.bbox)
-    
-    return bboxes, bw
+    bboxes = np.asarray(bboxes)
+
+    return bboxes, grayscale

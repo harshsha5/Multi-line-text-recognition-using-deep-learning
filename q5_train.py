@@ -126,7 +126,6 @@ def trainNet(net, batch_size, n_epochs, learning_rate):
         total_train_loss = 0
         
         for i, data in enumerate(train_loader, 0):
-            print(i)
             
             #Get inputs
             inputs, labels = data
