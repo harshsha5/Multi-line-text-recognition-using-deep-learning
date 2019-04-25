@@ -10,20 +10,21 @@ import torch.optim as optim
 import time
 
 
-transform = transforms.Compose([transforms.ToTensor(), transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))])	
+transform = transforms.Compose([transforms.ToTensor(), transforms.Normalize((0.5,), (0.5,))])   #How do I get the mean and the standard deviation. Also change this for 1 channel
 
 train_set = torchvision.datasets.EMNIST(root='./emnist_data', split= 'balanced',train=True, download=True, transform=transform)
+
 # img, lab = train_set.__getitem__(0)
 # print(img.shape)
 
 # test_set = torchvision.datasets.CIFAR10(root='./cifardata', train=False, download=True, transform=transform)
 
 classes = ['0','1','2','3','4','5','6','7','8','9',
-       		'A','B','C','D','E','F','G','H','I','J','K','L','M','N','O','P','Q','R','S','T','U','V','W','X','Y','Z',
-       		'a','b','d','e','f','g','h','n','q','r','t']
+            'A','B','C','D','E','F','G','H','I','J','K','L','M','N','O','P','Q','R','S','T','U','V','W','X','Y','Z',
+            'a','b','d','e','f','g','h','n','q','r','t']
 
 #Training
-n_training_samples = 2000																#Tune this number
+n_training_samples = 4000                                                               #Tune this number
 train_sampler = SubsetRandomSampler(np.arange(n_training_samples, dtype=np.int64))
 
 #Validation (Understand)
@@ -37,29 +38,31 @@ class SimpleCNN(torch.nn.Module):
     def __init__(self):
         super(SimpleCNN, self).__init__()
         
-        #Input channels = 3, output channels = 18
-        self.conv1 = torch.nn.Conv2d(3, 18, kernel_size=3, stride=1, padding=1)	#Padding is one, so no reduction in size for a 3X3 filter during convolution
+        #Input channels = 3, output channels = 32
+        self.conv1 = torch.nn.Conv2d(1, 32, kernel_size=3, stride=1, padding=1) #Padding is one, so no reduction in size for a 3X3 filter during convolution
         self.max_pool = torch.nn.MaxPool2d(kernel_size=2, stride=2, padding=0)
-        self.conv2 = torch.nn.Conv2d(18, 36, kernel_size=3, stride=1, padding=1)	#Tuning the output layer number!! I've taken 36 as of now!!
-        self.conv2_drop = torch.nn.Dropout2d()											#When and where to use is a design decision!!
+        self.conv2 = torch.nn.Conv2d(32, 64, kernel_size=3, stride=1, padding=1)    #Tuning the output layer number!! I've taken 36 as of now!!
+        self.conv2_drop = torch.nn.Dropout2d()                                          #When and where to use is a design decision!!
         self.pool = torch.nn.MaxPool2d(kernel_size=2, stride=2, padding=0)
         #4608 input features, 64 output features (see sizing flow below)
-        self.fc1 = torch.nn.Linear(8 * 8 * 36, 100)									#Tuning the output layer number!! I've taken 100 as of now!!
+        self.fc1 = torch.nn.Linear(7 * 7 * 64, 100)                                 #Tuning the output layer number!! I've taken 100 as of now!!
         
         #100 input features, 47 output features for our 47 defined classes
         self.fc2 = torch.nn.Linear(100, 47)
         
     def forward(self, x):
 
-        x = F.relu(self.max_pool(self.conv1(x)))						#Is there another argument which is passed here?
+        x = F.relu(self.max_pool(self.conv1(x)))                        #Is there another argument which is passed here?
 
-        x = F.relu(self.max_pool(self.conv2_drop(self.conv2(x))))
+        x = F.relu(self.max_pool(self.conv2_drop(self.conv2(x))))       #Linear dropout or 2D drop out. Pros and cons?
 
-        x = x.view(-1, 8 * 8 * 36)
+        # print(x.size)
 
-        x = F.relu(self.fc1(x))		#Should I dropout here again?
+        x = x.view(-1, 7 * 7 * 64)
 
-        x = self.fc2(x)
+        x = F.relu(self.fc1(x))     #Should I dropout here again?           #Relu here or not?
+
+        x = self.fc2(x)                                                     #Where do we put softmax?
 
         #x = F.relu(self.conv1(x))
         
@@ -123,12 +126,13 @@ def trainNet(net, batch_size, n_epochs, learning_rate):
         total_train_loss = 0
         
         for i, data in enumerate(train_loader, 0):
+            print(i)
             
             #Get inputs
             inputs, labels = data
             
             #Wrap them in a Variable object
-            inputs, labels = Variable(inputs), Variable(labels)			#What is a variable object?
+            inputs, labels = Variable(inputs), Variable(labels)         #What is a variable object?
             
             #Set the parameter gradients to zero
             optimizer.zero_grad()
@@ -136,20 +140,36 @@ def trainNet(net, batch_size, n_epochs, learning_rate):
             #Forward pass, backward pass, optimize
             outputs = net(inputs)
             loss_size = loss(outputs, labels)
-            loss_size.backward()
-            optimizer.step()
+            loss_size.backward()                                        #??
+            optimizer.step()                                            #??
+
+            # print(loss_size)
             
             #Print statistics
-            running_loss += loss_size.data[0]
-            total_train_loss += loss_size.data[0]
+            # running_loss += loss_size.data[0]          
+            # total_train_loss += loss_size.data[0]
+            running_loss += loss_size.item()         
+            total_train_loss += loss_size.item() 
+
+            # Track the accuracy
+            total = labels.size(0)
+            _, predicted = torch.max(outputs.data, 1)
+            correct = (predicted == labels).sum().item()
+
             
-            #Print every 10th batch of an epoch
-            if (i + 1) % (print_every + 1) == 0:
-                print("Epoch {}, {:d}% \t train_loss: {:.2f} took: {:.2f}s".format(
-                        epoch+1, int(100 * (i+1) / n_batches), running_loss / print_every, time.time() - start_time))
-                #Reset running loss and time
-                running_loss = 0.0
-                start_time = time.time()
+            # #Print every 10th batch of an epoch
+            # if (i + 1) % (print_every + 1) == 0:
+            #     print("Epoch {}, {:d}% \t train_loss: {:.2f} took: {:.2f}s".format(
+            #             epoch+1, int(100 * (i+1) / n_batches), running_loss / print_every, time.time() - start_time))
+
+            #     #Reset running loss and time
+            #     running_loss = 0.0
+            #     start_time = time.time()
+
+            if (i + 1) % 100 == 0:
+                print('Epoch [{}/{}], Step [{}/{}], Loss: {:.4f}, Accuracy: {:.2f}%'
+                      .format(epoch + 1, n_epochs, i + 1, n_batches, loss_size.item(),
+                              (correct / total) * 100))
             
         #At the end of the epoch, do a pass on the validation set
         # total_val_loss = 0
