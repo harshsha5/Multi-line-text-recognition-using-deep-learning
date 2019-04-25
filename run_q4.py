@@ -108,8 +108,8 @@ def order_bounding_boxes_as_rows(bboxes_original,bw):
 
     reordered_bboxes = reordered_bboxes[1:,:]
     average_word_length = sum_of_word_lengths/reordered_bboxes.shape[0]
-    print(reordered_bboxes)
-    print(average_word_length)
+    # print(reordered_bboxes)
+    # print(average_word_length)
     indices_of_spaces = find_indices_of_spaces(reordered_bboxes,average_word_length)
 
 
@@ -118,52 +118,71 @@ def order_bounding_boxes_as_rows(bboxes_original,bw):
     save the indices of the spaces.
     If the distance between the start of next > start of previous + 1.3 mean_length_of_word_in_a_row then it's a different word
     '''
-    ipdb.set_trace()
 
     return reordered_bboxes,indices_of_new_line,indices_of_spaces
 
+def get_output_text(predicted_outputs,possible_classification_outputs,indices_of_new_line,indices_of_spaces):
+    ipdb.set_trace()
+    stro = ''
+    for i in range(predicted_outputs.shape[0]):
+        if(len(indices_of_new_line)!=0 and indices_of_new_line[0]==i):
+            stro+='\n'
+            indices_of_new_line.pop(0)
+        if(len(indices_of_spaces)!=0 and indices_of_spaces[0]+1==i):
+            stro+=' '
+            indices_of_spaces.pop(0)
+        stro+=possible_classification_outputs[predicted_outputs[i]]
 
+    print(stro)
+    return stro
 
-#Referenced Tutorial for this question
-
-for img in os.listdir('../images'):
-    im1 = skimage.img_as_float(skimage.io.imread(os.path.join('../images',img)))
-    bboxes, bw = findLetters(im1)
-
-    plt.imshow(bw)
-    # for bbox in bboxes:
-    for i in range (bboxes.shape[0]):    
-        minr, minc, maxr, maxc = bboxes[i,:]
-        rect = matplotlib.patches.Rectangle((minc, minr), maxc - minc, maxr - minr,
-                                fill=False, edgecolor='red', linewidth=2)
-        plt.gca().add_patch(rect)
-        # circle = Circle((maxc, maxr), 10, facecolor='none',edgecolor=(0, 0.8, 0.8), linewidth=3, alpha=0.5)
-        # plt.gca().add_patch(circle)
-    plt.show()
-    # print(bboxes.shape,type(bboxes))
-    # find the rows using..RANSAC, counting, clustering, etc.
-    
-    # crop the bounding boxes
-    # note.. before you flatten, transpose the image (that's how the dataset is!)
-    # consider doing a square crop, and even using np.pad() to get your images looking more like the dataset
-    
-    # load the weights
-    # run the crops through your neural network and print them out
-    import pickle
+#Referenced Tutorial for the body of main
+if __name__ == "__main__":
     import string
-    letters = np.array([_ for _ in string.ascii_uppercase[:26]] + [str(_) for _ in range(10)])
-    params = pickle.load(open('q3_weights.pickle','rb'))
+    possible_classification_outputs_string = string.ascii_uppercase[:26] + ''.join([str(_) for _ in range(10)])
+    possible_classification_outputs_list = []
+    for elt in possible_classification_outputs_string:
+        possible_classification_outputs_list.append(elt)
+    possible_classification_outputs= np.asarray(possible_classification_outputs_list)
 
-    bboxes = order_bounding_boxes_as_rows(bboxes,bw)
-    # X = create_dataset(bboxes,bw)
+    for img in os.listdir('../images'):
+        im1 = skimage.img_as_float(skimage.io.imread(os.path.join('../images',img)))
+        bboxes, bw = findLetters(im1)
 
-    # h1 = forward(X,params,'layer1')
-    # probs = forward(h1,params,'output',softmax)
-    # predicted_outputs = np.argmax(probs, axis=1)
-    # print(predicted_outputs)
+        plt.imshow(bw)
+        # for bbox in bboxes:
+        for i in range (bboxes.shape[0]):    
+            minr, minc, maxr, maxc = bboxes[i,:]
+            rect = matplotlib.patches.Rectangle((minc, minr), maxc - minc, maxr - minr,
+                                    fill=False, edgecolor='red', linewidth=2)
+            plt.gca().add_patch(rect)
+            # circle = Circle((maxc, maxr), 10, facecolor='none',edgecolor=(0, 0.8, 0.8), linewidth=3, alpha=0.5)
+            # plt.gca().add_patch(circle)
+        plt.show()
+        # print(bboxes.shape,type(bboxes))
+        # find the rows using..RANSAC, counting, clustering, etc.
+        
+        # crop the bounding boxes
+        # note.. before you flatten, transpose the image (that's how the dataset is!)
+        # consider doing a square crop, and even using np.pad() to get your images looking more like the dataset
+        
+        # load the weights
+        # run the crops through your neural network and print them out
+        import pickle
+        letters = np.array([_ for _ in string.ascii_uppercase[:26]] + [str(_) for _ in range(10)])
+        params = pickle.load(open('q3_weights.pickle','rb'))
 
-    '''
-    See how to output the final labels. See better characterisation of the bounding boxes. How to pick appropriate bounding box for sentence formation
-    rather than randomly.
-    '''
+        bboxes,indices_of_new_line,indices_of_spaces = order_bounding_boxes_as_rows(bboxes,bw)
+        bboxes = bboxes.astype(int)
+        X = create_dataset(bboxes,bw)
+
+        h1 = forward(X,params,'layer1')
+        probs = forward(h1,params,'output',softmax)
+        predicted_outputs = np.argmax(probs, axis=1)
+        stro = get_output_text(predicted_outputs,possible_classification_outputs,indices_of_new_line,indices_of_spaces)
+
+        '''
+        See how to output the final labels. See better characterisation of the bounding boxes. How to pick appropriate bounding box for sentence formation
+        rather than randomly.
+        '''
     
