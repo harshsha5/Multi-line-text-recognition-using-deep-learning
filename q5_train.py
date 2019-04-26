@@ -10,9 +10,11 @@ import torch.optim as optim
 import time
 
 
-transform = transforms.Compose([transforms.ToTensor(), transforms.Normalize((0.5,), (0.5,))])   #How do I get the mean and the standard deviation. Also change this for 1 channel
+transform = transforms.Compose([transforms.ToTensor(), transforms.Normalize((0.1307,), (0.3081,))])   #How do I get the mean and the standard deviation. Also change this for 1 channel
 
 train_set = torchvision.datasets.EMNIST(root='./emnist_data', split= 'balanced',train=True, download=True, transform=transform)
+test_set = torchvision.datasets.EMNIST(root='./emnist_data',split= 'balanced', train=False, download=True, transform=transform)
+
 
 # img, lab = train_set.__getitem__(0)
 # print(img.shape)
@@ -24,8 +26,15 @@ classes = ['0','1','2','3','4','5','6','7','8','9',
             'a','b','d','e','f','g','h','n','q','r','t']
 
 #Training
-n_training_samples = 4000                                                               #Tune this number
+n_training_samples = 20000                                                            #Tune this number
 train_sampler = SubsetRandomSampler(np.arange(n_training_samples, dtype=np.int64))
+
+
+n_val_samples = 5000
+val_sampler = SubsetRandomSampler(np.arange(n_training_samples, n_training_samples + n_val_samples, dtype=np.int64))
+
+n_test_samples = 5000
+test_sampler = SubsetRandomSampler(np.arange(n_test_samples, dtype=np.int64))
 
 #Validation (Understand)
 # n_val_samples = 5000
@@ -40,25 +49,28 @@ class SimpleCNN(torch.nn.Module):
         
         #Input channels = 3, output channels = 32
         self.conv1 = torch.nn.Conv2d(1, 32, kernel_size=3, stride=1, padding=1) #Padding is one, so no reduction in size for a 3X3 filter during convolution
-        self.max_pool = torch.nn.MaxPool2d(kernel_size=2, stride=2, padding=0)
+        self.pool1 = torch.nn.MaxPool2d(kernel_size=2, stride=2, padding=0)
         self.conv2 = torch.nn.Conv2d(32, 64, kernel_size=3, stride=1, padding=1)    #Tuning the output layer number!! I've taken 36 as of now!!
         self.conv2_drop = torch.nn.Dropout2d()                                          #When and where to use is a design decision!!
-        self.pool = torch.nn.MaxPool2d(kernel_size=2, stride=2, padding=0)
+        self.pool2 = torch.nn.MaxPool2d(kernel_size=2, stride=2, padding=0)
+        self.conv3 = torch.nn.Conv2d(64, 128, kernel_size=3, stride=1, padding=1)    #Tuning the output layer number!! I've taken 36 as of now!!                                        #When and where to use is a design decision!!
+        #self.pool3 = torch.nn.MaxPool2d(kernel_size=2, stride=2, padding=0)
         #4608 input features, 64 output features (see sizing flow below)
-        self.fc1 = torch.nn.Linear(7 * 7 * 64, 100)                                 #Tuning the output layer number!! I've taken 100 as of now!!
+        #self.conv4 = torch.nn.Conv2d(128, 256, kernel_size=3, stride=1, padding=1) 
+        self.fc1 = torch.nn.Linear(7 * 7 * 128, 500)                                 #Tuning the output layer number!! I've taken 100 as of now!!
         
         #100 input features, 47 output features for our 47 defined classes
-        self.fc2 = torch.nn.Linear(100, 47)
+        self.fc2 = torch.nn.Linear(500, 47)
         
     def forward(self, x):
+        x = F.relu(self.pool1(self.conv1(x)))                        #Is there another argument which is passed here?
 
-        x = F.relu(self.max_pool(self.conv1(x)))                        #Is there another argument which is passed here?
+        x = F.relu(self.pool2(self.conv2(x)))       #Linear dropout or 2D drop out. Pros and cons?
 
-        x = F.relu(self.max_pool(self.conv2_drop(self.conv2(x))))       #Linear dropout or 2D drop out. Pros and cons?
-
+        x = F.elu((self.conv3(x)))
         # print(x.size)
 
-        x = x.view(-1, 7 * 7 * 64)
+        x = x.view(-1, 7 * 7 * 128)
 
         x = F.relu(self.fc1(x))     #Should I dropout here again?           #Relu here or not?
 
@@ -88,7 +100,10 @@ def get_train_loader(batch_size):
     train_loader = torch.utils.data.DataLoader(train_set, batch_size=batch_size, sampler=train_sampler, num_workers=2)
     return(train_loader)
 
-def createLossAndOptimizer(net, learning_rate=0.001):
+test_loader = torch.utils.data.DataLoader(test_set, batch_size=4, sampler=test_sampler, num_workers=2)
+val_loader = torch.utils.data.DataLoader(train_set, batch_size=128, sampler=val_sampler, num_workers=2)
+
+def createLossAndOptimizer(net, learning_rate=0.0005):
     
     #Loss function
     loss = torch.nn.CrossEntropyLoss()
@@ -171,24 +186,26 @@ def trainNet(net, batch_size, n_epochs, learning_rate):
                               (correct / total) * 100))
             
         #At the end of the epoch, do a pass on the validation set
-        # total_val_loss = 0
-        # for inputs, labels in val_loader:
+        total_val_loss = 0
+        for inputs, labels in val_loader:
             
-        #     #Wrap tensors in Variables
-        #     inputs, labels = Variable(inputs), Variable(labels)
+            #Wrap tensors in Variables
+            inputs, labels = Variable(inputs), Variable(labels)
             
-        #     #Forward pass
-        #     val_outputs = net(inputs)
-        #     val_loss_size = loss(val_outputs, labels)
-        #     total_val_loss += val_loss_size.data[0]
+            #Forward pass
+            val_outputs = net(inputs)
+            val_loss_size = loss(val_outputs, labels)
+            total_val_loss += val_loss_size.item()
             
-        # print("Validation loss = {:.2f}".format(total_val_loss / len(val_loader)))
-        
+        print("Validation loss = {:.2f}".format(total_val_loss / len(val_loader)))
+    #torch.save(CNN.state_dict(), "cnn_weights")   
     print("Training finished, took {:.2f}s".format(time.time() - training_start_time))
 
 
-CNN = SimpleCNN()
-trainNet(CNN, batch_size=32, n_epochs=5, learning_rate=0.001)
+if __name__ == "__main__":
+
+    CNN = SimpleCNN()
+    trainNet(CNN, batch_size=32, n_epochs=5, learning_rate=0.0001)
 
 
 

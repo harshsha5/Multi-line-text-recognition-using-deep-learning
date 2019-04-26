@@ -23,16 +23,38 @@ import warnings
 warnings.simplefilter(action='ignore', category=FutureWarning)
 warnings.simplefilter(action='ignore', category=UserWarning)
 
+def square_and_pad(array,input_size):
+    height,width = array.shape
+    extra_pad = 30
+    if(height>width):
+        deficit_pad = int((height-width)/2)
+        padding=((extra_pad,extra_pad),(deficit_pad + extra_pad,deficit_pad+extra_pad))
+    else:
+        deficit_pad = int((width-height)/2)
+        padding=((deficit_pad + extra_pad,deficit_pad + extra_pad),(extra_pad,extra_pad))
+
+    array = np.pad(array, padding, mode='constant', constant_values=1)
+    #print("Array post padding: ",array.shape)
+    array = skimage.transform.resize(array, (input_size, input_size),anti_aliasing=True)                            #See if anti aliasing is required
+    array = skimage.morphology.erosion(array,skimage.morphology.square(3))
+    array = skimage.morphology.erosion(array,skimage.morphology.square(3))                              #Remove square and try. Haikus is good
+    #array = skimage.morphology.erosion(array)
+    return array
+
 def create_dataset(bboxes,bw,input_size = 32):
     X = None
     for i in range (bboxes.shape[0]):    
         minr, minc, maxr, maxc = bboxes[i,:]
         array = bw[minr:maxr,minc:maxc]             #See if this is supposed to be minc:maxc...
-        array = skimage.transform.resize(array, (input_size, input_size),anti_aliasing=True)                            #See if anti aliasing is required
-
-        # fig, ax = plt.subplots(figsize=(10, 6))
-        # ax.imshow(array)
-        # plt.show()
+        #value = np.mean(array)
+        array = square_and_pad(array,input_size)
+        # array = np.pad(array, [(10, 10), (10, 10)], mode='constant', constant_values=1)
+        # array = skimage.transform.resize(array, (input_size, input_size),anti_aliasing=True)                            #See if anti aliasing is required
+        # array = skimage.morphology.erosion(array)
+        if(my_flag==1):
+            fig, ax = plt.subplots(figsize=(10, 6))
+            ax.imshow(array)
+            plt.show()
 
         flattened_array = (np.transpose(array)).flatten()                   #Check!
 
@@ -122,7 +144,6 @@ def order_bounding_boxes_as_rows(bboxes_original,bw):
     return reordered_bboxes,indices_of_new_line,indices_of_spaces
 
 def get_output_text(predicted_outputs,possible_classification_outputs,indices_of_new_line,indices_of_spaces):
-    ipdb.set_trace()
     stro = ''
     for i in range(predicted_outputs.shape[0]):
         if(len(indices_of_new_line)!=0 and indices_of_new_line[0]==i):
@@ -136,6 +157,7 @@ def get_output_text(predicted_outputs,possible_classification_outputs,indices_of
     print(stro)
     return stro
 
+my_flag = 0
 #Referenced Tutorial for the body of main
 if __name__ == "__main__":
     import string
@@ -146,6 +168,9 @@ if __name__ == "__main__":
     possible_classification_outputs= np.asarray(possible_classification_outputs_list)
 
     for img in os.listdir('../images'):
+        if(img=="04_eep.jpg"):
+            my_flag = 1
+
         im1 = skimage.img_as_float(skimage.io.imread(os.path.join('../images',img)))
         bboxes, bw = findLetters(im1)
 
