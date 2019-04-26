@@ -36,9 +36,10 @@ def square_and_pad(array,input_size):
     array = np.pad(array, padding, mode='constant', constant_values=1)
     #print("Array post padding: ",array.shape)
     array = skimage.transform.resize(array, (input_size, input_size),anti_aliasing=True)                            #See if anti aliasing is required
-    array = skimage.morphology.erosion(array,skimage.morphology.square(3))
-    array = skimage.morphology.erosion(array,skimage.morphology.square(3))                              #Remove square and try. Haikus is good
-    #array = skimage.morphology.erosion(array)
+    #array = skimage.morphology.erosion(array,skimage.morphology.square(3))
+    #array = skimage.morphology.erosion(array,skimage.morphology.square(3))                              #Remove square and try. Haikus is good
+    array = skimage.morphology.erosion(array)
+    array = skimage.morphology.erosion(array)
     return array
 
 def create_dataset(bboxes,bw,input_size = 32):
@@ -174,7 +175,7 @@ if __name__ == "__main__":
         im1 = skimage.img_as_float(skimage.io.imread(os.path.join('../images',img)))
         bboxes, bw = findLetters(im1)
 
-        plt.imshow(bw)
+        plt.imshow(1-bw,cmap='Greys',  interpolation='nearest')
         # for bbox in bboxes:
         for i in range (bboxes.shape[0]):    
             minr, minc, maxr, maxc = bboxes[i,:]
