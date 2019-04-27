@@ -2,7 +2,6 @@ import numpy as np
 # you should write your functions in nn.py
 from nn import *
 from util import *
-import ipdb
 
 
 # fake data
@@ -145,17 +144,49 @@ params_orig = copy.deepcopy(params)
 
 eps = 1e-6
 for k,v in params.items():
+    print(k)
+    # ipdb.set_trace()
     if '_' in k: 
-        ipdb.set_trace()
         continue
-    # we have a real parameter!
-    # for each value inside the parameter
-    #   add epsilon
-    #   run the network
-    #   get the loss
-    #   compute derivative with central diffs
-    
-    
+    #The case of weights
+    if(len(v.shape)>1):
+        for i in range(v.shape[0]):
+            for j in range(v.shape[1]):
+                v[i,j]+=eps
+                h1 = forward(x,params,'layer1')
+                probs = forward(h1,params,'output',softmax) 
+                loss_1, acc_1 = compute_loss_and_acc(y, probs)
+                v[i,j]-=2*eps
+                h1 = forward(x,params,'layer1')
+                probs = forward(h1,params,'output',softmax) 
+                loss_2, acc_2 = compute_loss_and_acc(y, probs)
+                v[i,j]+=eps
+                params['grad_'+k][i,j] = (loss_1 - loss_2)/(2*eps)
+    #The case of bias
+    else:
+        for i in range(v.shape[0]):
+            v[i]+=eps
+            h1 = forward(x,params,'layer1')
+            probs = forward(h1,params,'output',softmax) 
+            loss_1, acc_1 = compute_loss_and_acc(y, probs)
+            v[i]-=2*eps
+            h1 = forward(x,params,'layer1')
+            probs = forward(h1,params,'output',softmax) 
+            loss_2, acc_2 = compute_loss_and_acc(y, probs)
+            v[i]+=eps
+            params['grad_'+k][i] = (loss_1 - loss_2)/(2*eps)
+
+
+
+#Backprop _method
+h1 = forward(x,params_orig,'layer1')
+probs = forward(h1,params_orig,'output',softmax)
+loss, acc = compute_loss_and_acc(y, probs)
+delta1 = probs
+delta1[np.arange(probs.shape[0]),np.argmax(y, axis=1)] -= 1
+delta2 = backwards(delta1,params_orig,'output',linear_deriv)
+backwards(delta2,params_orig,'layer1',sigmoid_deriv)
+        
 
 total_error = 0
 for k in params.keys():

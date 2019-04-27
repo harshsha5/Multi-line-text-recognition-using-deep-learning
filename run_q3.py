@@ -2,7 +2,8 @@ import numpy as np
 import scipy.io
 from nn import *
 import matplotlib.pyplot as plt
-import ipdb
+from mpl_toolkits.axes_grid1 import ImageGrid
+
 
 def get_accuracy_graph(accuracy_per_epoch_list,max_iters):
     epoch_count = np.arange(1,max_iters+1)
@@ -23,6 +24,22 @@ def get_loss_graph(total_loss_per_epoch_list,max_iters):
     ax.set_ylabel('Cross entropy Loss')
     ax.set_title('Cross Entropy loss VS No. of Epochs')
     plt.show()
+
+def see_weights(weights_before_network_training):
+    fig = plt.figure(1, (4., 4.))
+
+    grid = ImageGrid(fig, 111,  # similar to subplot(111)
+                     nrows_ncols=(8, 8),  # creates 1x2 grid of axes
+                     axes_pad=0.1,  # pad between axes in inch.
+                     )
+
+    weights_before_network_training = np.reshape(weights_before_network_training,(32,32,64))
+
+    for i in range(64):
+        grid[i].imshow(weights_before_network_training[:,:,i])
+    plt.show()  
+
+
 
 train_data = scipy.io.loadmat('../data/nist36_train.mat')
 valid_data = scipy.io.loadmat('../data/nist36_valid.mat')
@@ -63,7 +80,7 @@ assert(params['Wlayer1'].shape == (1024,64))
 assert(params['blayer1'].shape == (64,))
 
 weights_before_network_training = params['Wlayer1']
-# ipdb.set_trace()
+see_weights(weights_before_network_training)   
 
 # with default settings, you should get loss < 150 and accuracy > 80%
 accuracy_per_epoch_list = []
@@ -122,15 +139,39 @@ Why do we need the validation data in loss/accuracy VS no. of iterations. Valida
 Even if we need it, where do we run the forward pass for the validation data?
 '''
 
-get_accuracy_graph(accuracy_per_epoch_list,max_iters)
-get_loss_graph(total_loss_per_epoch_list,max_iters)
-get_accuracy_graph(validation_accuracy_per_epoch_list,max_iters)
-get_loss_graph(validation_loss_per_epoch_list,max_iters)
+#To see graphs, uncomment below
+# get_accuracy_graph(accuracy_per_epoch_list,max_iters)
+# get_loss_graph(total_loss_per_epoch_list,max_iters)
+# get_accuracy_graph(validation_accuracy_per_epoch_list,max_iters)
+# get_loss_graph(validation_loss_per_epoch_list,max_iters)
 
 weights_after_network_training = params['Wlayer1']
 
 # run on validation set and report accuracy! should be above 75%
-# batches = get_random_batches(valid_x,valid_y,valid_x.shape[0])
+
+batches = get_random_batches(valid_x,valid_y,valid_x.shape[0])
+for xb,yb in batches:
+    # forward
+    h1 = forward(xb,params,'layer1')
+    probs = forward(h1,params,'output',softmax)
+
+    # loss
+    # be sure to add loss and accuracy to epoch totals 
+    validation_loss, valid_acc = compute_loss_and_acc(yb, probs)
+
+print('Validation accuracy: ',valid_acc)
+
+if False: # view the data
+    for crop in xb:
+        import matplotlib.pyplot as plt
+        plt.imshow(crop.reshape(32,32).T)
+        plt.show()
+
+
+#Test data
+# batches = get_random_batches(test_x,test_y,test_x.shape[0])
+# #batch_num = len(batches)
+# #print("No. of batches considered for validation data are: ",batch_num)
 
 # for xb,yb in batches:
 #     # forward
@@ -139,30 +180,9 @@ weights_after_network_training = params['Wlayer1']
 
 #     # loss
 #     # be sure to add loss and accuracy to epoch totals 
-#     validation_loss, valid_acc = compute_loss_and_acc(yb, probs)
+#     test_loss, test_acc = compute_loss_and_acc(yb, probs)
 
-# print('Validation accuracy: ',valid_acc)
-
-# if False: # view the data
-#     for crop in xb:
-#         import matplotlib.pyplot as plt
-#         plt.imshow(crop.reshape(32,32).T)
-#         plt.show()
-
-batches = get_random_batches(test_x,test_y,test_x.shape[0])
-#batch_num = len(batches)
-#print("No. of batches considered for validation data are: ",batch_num)
-
-for xb,yb in batches:
-    # forward
-    h1 = forward(xb,params,'layer1')
-    probs = forward(h1,params,'output',softmax)
-
-    # loss
-    # be sure to add loss and accuracy to epoch totals 
-    test_loss, test_acc = compute_loss_and_acc(yb, probs)
-
-print('Test Accuracy: ',test_acc)
+# print('Test Accuracy: ',test_acc)
 
 if False: # view the data
     for crop in xb:
@@ -176,19 +196,9 @@ if False: # view the data
 #     pickle.dump(saved_params, handle, protocol=pickle.HIGHEST_PROTOCOL)
 
 # Q3.1.3
-import matplotlib.pyplot as plt
-from mpl_toolkits.axes_grid1 import ImageGrid
 
-fig = plt.figure(1, (4., 4.))
-grid = ImageGrid(fig, 111,  # similar to subplot(111)
-                 nrows_ncols=(1, 2),  # creates 1x2 grid of axes
-                 axes_pad=0.1,  # pad between axes in inch.
-                 )
-
-grid[0].imshow(weights_before_network_training)
-grid[1].imshow(weights_after_network_training)
-plt.show()
-
+see_weights(weights_after_network_training) 
+ 
 
 # Q3.1.4
 confusion_matrix = np.zeros((train_y.shape[1],train_y.shape[1]))

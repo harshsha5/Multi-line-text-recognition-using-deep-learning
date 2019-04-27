@@ -12,7 +12,7 @@ from q4 import *
 from q5_train import SimpleCNN
 
 # transform = transforms.Compose([transforms.ToTensor(), transforms.Normalize((0.1307,), (0.3081,))]) 
-#transform_for_test = transforms.Normalize((0.1307,), (0.3081,))
+# #transform_for_test = transforms.Normalize((0.1307,), (0.3081,))
 # train_set = torchvision.datasets.EMNIST(root='./emnist_data', split= 'balanced',train=True, download=True, transform=transform)
 # n_training_samples = 20000                                                            #Tune this number
 # train_sampler = SubsetRandomSampler(np.arange(n_training_samples, dtype=np.int64))
@@ -25,8 +25,43 @@ def display_input(X):
     for i in range(X_new.shape[0]):
         array = np.reshape(X_new[i,:],(28,28))
         fig, ax = plt.subplots(figsize=(10, 6))
-        ax.imshow(array)
+        ax.imshow(array,cmap='Greys',  interpolation='nearest')
         plt.show()
+
+def create_input_dataset(bboxes,bw,input_size = 32):
+    X = None
+    for i in range (bboxes.shape[0]):    
+        minr, minc, maxr, maxc = bboxes[i,:]
+        array = bw[minr:maxr,minc:maxc]             #See if this is supposed to be minc:maxc...
+        array = square_and_pad_pytorch(array,input_size)
+
+        flattened_array = array.flatten()                   #Check!
+
+        if(i==0):
+            X = flattened_array
+        else:
+            X = np.vstack((X,flattened_array))
+
+    return X
+
+def square_and_pad_pytorch(array,input_size):
+    height,width = array.shape
+    extra_pad = 30
+    if(height>width):
+        deficit_pad = int((height-width)/2)
+        padding=((extra_pad,extra_pad),(deficit_pad + extra_pad,deficit_pad+extra_pad))
+    else:
+        deficit_pad = int((width-height)/2)
+        padding=((deficit_pad + extra_pad,deficit_pad + extra_pad),(extra_pad,extra_pad))
+
+    array = np.pad(array, padding, mode='constant', constant_values=1)
+    #print("Array post padding: ",array.shape)
+    array = skimage.transform.resize(array, (input_size, input_size),anti_aliasing=True)                            #See if anti aliasing is required
+    #array = skimage.morphology.erosion(array,skimage.morphology.square(3))
+    #array = skimage.morphology.erosion(array,skimage.morphology.square(3))                              #Remove square and try. Haikus is good
+    # array = skimage.morphology.erosion(array)
+    array = skimage.morphology.erosion(array)
+    return array
 
 
 
@@ -37,8 +72,8 @@ if __name__ == "__main__":
 
     for img in os.listdir('../images'):
         # if(True):
-        if(img=="04_deep.jpg"):
-            #train_loader = get_train_loader(batch_size = 20000)
+        if(True):
+            # train_loader = get_train_loader(batch_size = 20000)
 
             im1 = skimage.img_as_float(skimage.io.imread(os.path.join('../images',img)))
             bboxes, bw = findLetters(im1)
@@ -51,11 +86,14 @@ if __name__ == "__main__":
 
             bboxes,indices_of_new_line,indices_of_spaces = order_bounding_boxes_as_rows(bboxes,bw)
             bboxes = bboxes.astype(int)
-            X_numpy = create_dataset(bboxes,bw,28)
+            X_numpy = create_input_dataset(bboxes,bw,28)
 
-            for i in range(X_numpy.shape[0]):
-                arr = np.reshape(X_numpy[i,:],(28,28))
-                X_numpy[i,:] = (np.rot90(arr)).flatten()
+            # for i in range(X_numpy.shape[0]):
+            #     arr = np.reshape(X_numpy[i,:],(28,28))
+            #     fig, ax = plt.subplots(figsize=(10, 6))
+            #     ax.imshow(arr,cmap='Greys',  interpolation='nearest')
+            #     plt.show()
+               # # X_numpy[i,:] = (np.rot90(arr)).flatten()
 
 
 
@@ -76,6 +114,7 @@ if __name__ == "__main__":
             X[X<=0.25] = X[X<=0.25] ** 3
             X = (X - .1307)/.3081
 
+            X = 1-X
             #display_input(X)
 
             outputs = CNN(X)
@@ -88,7 +127,7 @@ if __name__ == "__main__":
             #     count = 0
             #     for inputs, labels in train_loader:
             #         print(count)
-            #         outputs = CNN(inputs)                                           #??
+            #         outputs = CNN(inputs)                                           
 
             #         # Track the accuracy
             #         total = labels.size(0)
