@@ -3,7 +3,7 @@ import torch
 import torchvision
 import torchvision.transforms as transforms
 from torch.utils.data.sampler import SubsetRandomSampler
-import ipdb
+import pdb
 from torch.autograd import Variable
 import torch.nn.functional as F
 import torch.optim as optim
@@ -63,6 +63,7 @@ class SimpleCNN(torch.nn.Module):
         self.fc2 = torch.nn.Linear(500, 47)
         
     def forward(self, x):
+        # pdb.set_trace() 
         x = F.relu(self.pool1(self.conv1(x)))                        #Is there another argument which is passed here?
 
         x = F.relu(self.pool2(self.conv2(x)))       #Linear dropout or 2D drop out. Pros and cons?
@@ -196,8 +197,15 @@ def trainNet(net, batch_size, n_epochs, learning_rate):
             val_outputs = net(inputs)
             val_loss_size = loss(val_outputs, labels)
             total_val_loss += val_loss_size.item()
+
+            # Track the accuracy
+            total = labels.size(0)
+            _, predicted = torch.max(val_outputs.data, 1)
+            correct = (predicted == labels).sum().item()
             
         print("Validation loss = {:.2f}".format(total_val_loss / len(val_loader)))
+        print("Validation accuracy is ",(correct / total) * 100," %")
+
     #torch.save(CNN.state_dict(), "cnn_weights")   
     print("Training finished, took {:.2f}s".format(time.time() - training_start_time))
 

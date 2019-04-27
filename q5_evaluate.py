@@ -3,7 +3,7 @@ import torch
 import torchvision
 import torchvision.transforms as transforms
 from torch.utils.data.sampler import SubsetRandomSampler
-import ipdb
+import pdb
 from torch.autograd import Variable
 import torch.nn.functional as F
 import torch.optim as optim
@@ -12,13 +12,22 @@ from q4 import *
 from q5_train import SimpleCNN
 
 # transform = transforms.Compose([transforms.ToTensor(), transforms.Normalize((0.1307,), (0.3081,))]) 
-transform_for_test = transforms.Normalize((0.1307,), (0.3081,))
+#transform_for_test = transforms.Normalize((0.1307,), (0.3081,))
 # train_set = torchvision.datasets.EMNIST(root='./emnist_data', split= 'balanced',train=True, download=True, transform=transform)
 # n_training_samples = 20000                                                            #Tune this number
 # train_sampler = SubsetRandomSampler(np.arange(n_training_samples, dtype=np.int64))
 # def get_train_loader(batch_size):
 #     train_loader = torch.utils.data.DataLoader(train_set, batch_size=batch_size, sampler=train_sampler, num_workers=2)
 #     return(train_loader)
+
+def display_input(X):
+    X_new = X.numpy()
+    for i in range(X_new.shape[0]):
+        array = np.reshape(X_new[i,:],(28,28))
+        fig, ax = plt.subplots(figsize=(10, 6))
+        ax.imshow(array)
+        plt.show()
+
 
 
 if __name__ == "__main__":
@@ -48,24 +57,30 @@ if __name__ == "__main__":
                 arr = np.reshape(X_numpy[i,:],(28,28))
                 X_numpy[i,:] = (np.rot90(arr)).flatten()
 
-            '''
-            Images are coming rotated. Fix That!
 
-            '''
-            fig, ax = plt.subplots(figsize=(10, 6))
-            ax.imshow(np.reshape(X_numpy[1,:], (28,28)))
-            plt.show()
+
+            # fig, ax = plt.subplots(figsize=(10, 6))
+            # ax.imshow(np.reshape(X_numpy[1,:], (28,28)))
+            # plt.show()
             X = torch.from_numpy(X_numpy).float()
             X = torch.reshape(X, (X_numpy.shape[0], 1,28,28))
-            X = (X - .1307)/.3081
+            #X = (X - .1307)/.3081
             
             CNN = SimpleCNN()
             CNN.load_state_dict(torch.load("cnn_weights"))
             CNN.eval()
             #with torch.no_grad():
+
+            X = 1-X
+            X[X>0.25] = X[X>0.25] ** 0.25
+            X[X<=0.25] = X[X<=0.25] ** 3
+            X = (X - .1307)/.3081
+
+            #display_input(X)
+
             outputs = CNN(X)
             _, predicted = torch.max(outputs.data, 1)
-            ipdb.set_trace()
+            #ipdb.set_trace()
             # print(predicted)
             predicted_outputs = predicted.numpy()
 

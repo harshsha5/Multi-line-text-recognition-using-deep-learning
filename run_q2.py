@@ -2,7 +2,7 @@ import numpy as np
 # you should write your functions in nn.py
 from nn import *
 from util import *
-#import ipdb
+import ipdb
 
 
 # fake data
@@ -146,6 +146,7 @@ params_orig = copy.deepcopy(params)
 eps = 1e-6
 for k,v in params.items():
     if '_' in k: 
+        ipdb.set_trace()
         continue
     # we have a real parameter!
     # for each value inside the parameter

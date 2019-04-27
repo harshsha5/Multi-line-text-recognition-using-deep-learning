@@ -54,7 +54,7 @@ def create_dataset(bboxes,bw,input_size = 32):
         # array = skimage.morphology.erosion(array)
         if(my_flag==1):
             fig, ax = plt.subplots(figsize=(10, 6))
-            ax.imshow(array)
+            ax.imshow(1-array,cmap='Greys',  interpolation='nearest')
             plt.show()
 
         flattened_array = (np.transpose(array)).flatten()                   #Check!
@@ -169,7 +169,7 @@ if __name__ == "__main__":
     possible_classification_outputs= np.asarray(possible_classification_outputs_list)
 
     for img in os.listdir('../images'):
-        if(img=="04_eep.jpg"):
+        if(img=="01_list.jpg"):
             my_flag = 1
 
         im1 = skimage.img_as_float(skimage.io.imread(os.path.join('../images',img)))
